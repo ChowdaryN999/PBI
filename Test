@@ -1,1 +1,2 @@
-@{outputs('Get_request')?['body/Requestor_Email']}
+SAGE @{outputs('Get_request')?['body/Title']} · @{outputs('Get_request')?['body/SCL_Request_Type/Value']} · New request
+@{if(empty(outputs('Get_Domain')?['body/Notify_Email']),'<your address>',outputs('Get_Domain')?['body/Notify_Email'])}
