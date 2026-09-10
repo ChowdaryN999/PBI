@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAGE - Speaker Notes</title>
+<style>
+    * { box-sizing: border-box; }
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        margin: 0;
+        padding: 0;
+        background-color: #f4f5f7;
+        color: #2c2c2c;
+    }
+    .header {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: #1B2A4A;
+        color: #fff;
+        padding: 18px 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .header h1 {
+        margin: 0;
+        font-size: 1.5em;
+        letter-spacing: 0.5px;
+    }
+    .header p {
+        margin: 2px 0 0 0;
+        color: #C9A961;
+        font-size: 0.9em;
+    }
+    .timer-box {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    #timer {
+        font-size: 1.8em;
+        font-weight: bold;
+        font-variant-numeric: tabular-nums;
+        min-width: 90px;
+        text-align: center;
+        color: #fff;
+    }
+    #timer.warn { color: #C9A961; }
+    #timer.over { color: #d16b5c; }
+    .timer-btn {
+        background: #C9A961;
+        color: #1B2A4A;
+        border: none;
+        padding: 8px 14px;
+        border-radius: 5px;
+        font-weight: 600;
+        cursor: pointer;
+        font-size: 0.85em;
+    }
+    .timer-btn:hover { background: #dbbd7a; }
+
+    .container {
+        max-width: 900px;
+        margin: 30px auto;
+        padding: 0 20px 60px 20px;
+    }
+
+    .slide-card {
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        overflow: hidden;
+        border: 1px solid #e6e6e6;
+    }
+    .slide-card-header {
+        background: #1B2A4A;
+        color: #fff;
+        padding: 16px 26px;
+    }
+    .slide-card-header .tag {
+        display: inline-block;
+        background: #C9A961;
+        color: #1B2A4A;
+        font-size: 0.75em;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 3px 10px;
+        border-radius: 3px;
+        margin-bottom: 8px;
+    }
+    .slide-card-header h2 {
+        margin: 0;
+        font-size: 1.4em;
+    }
+    .slide-body {
+        padding: 26px;
+    }
+
+    .block {
+        margin-bottom: 24px;
+    }
+    .block h3 {
+        color: #1B2A4A;
+        font-size: 1.3em;
+        margin: 0 0 10px 0;
+        border-left: 4px solid #C9A961;
+        padding-left: 10px;
+    }
+    .talk-track {
+        background: #f9f8f4;
+        border: 1px solid #e9e2cf;
+        border-radius: 6px;
+        padding: 16px 18px;
+        font-size: 1.02em;
+        color: #333;
+    }
+    .talk-track p { margin: 0 0 12px 0; }
+    .talk-track p:last-child { margin-bottom: 0; }
+
+    .land-line {
+        background: #1B2A4A;
+        color: #fff;
+        padding: 14px 18px;
+        border-radius: 6px;
+        margin-top: 14px;
+        font-style: italic;
+        position: relative;
+    }
+    .land-line::before {
+        content: "LAND THIS LINE";
+        display: block;
+        font-style: normal;
+        font-size: 0.7em;
+        letter-spacing: 1px;
+        color: #C9A961;
+        font-weight: 700;
+        margin-bottom: 6px;
+    }
+
+    ul.point-list {
+        margin: 0;
+        padding-left: 20px;
+    }
+    ul.point-list li {
+        margin-bottom: 8px;
+    }
+
+    .two-col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+    .mini-card {
+        background: #f4f5f7;
+        border: 1px solid #e2e2e2;
+        border-radius: 6px;
+        padding: 24px 26px;
+    }
+    .mini-card h4 {
+        margin: 0 0 12px 0;
+        color: #1B2A4A;
+        font-size: 1.3em;
+    }
+    .mini-card p {
+        margin: 0;
+        font-size: 1.25em;
+        color: #444;
+    }
+
+    .anticipate {
+        background: #fdf3ee;
+        border-left: 4px solid #C9756B;
+        padding: 12px 16px;
+        border-radius: 4px;
+        font-size: 0.95em;
+    }
+    .anticipate strong { color: #a8493c; }
+
+    @media (max-width: 600px) {
+        .header { flex-direction: column; align-items: flex-start; gap: 10px; }
+        .two-col { grid-template-columns: 1fr; }
+    }
+</style>
+</head>
+<body>
+
+<div class="header">
+    <div>
+        <h1>SAGE - Speaker Notes</h1>
+        <p>Supply Chain Analytics Governance Ecosystem</p>
+    </div>
+    <div class="timer-box">
+        <span id="timer">00:00</span>
+        <button class="timer-btn" id="startPause">Start</button>
+        <button class="timer-btn" id="reset">Reset</button>
+    </div>
+</div>
+
+<div class="container">
+
+    <div class="slide-card">
+        <div class="slide-card-header">
+            <span class="tag">Slide - Intro</span>
+            <h2>What SAGE Is</h2>
+        </div>
+        <div class="slide-body">
+
+            <div class="block">
+                <h3>Speaker Notes</h3>
+                <div class="talk-track" style="font-size: 1.8em;">
+                    <p>SAGE is a first centralized analytics requests platform across our supply chain org, where colleagues can submit and manage analytics requests.</p>
+                    <p>It gives visibility to the domain SMEs to triage and prioritize the requests based on the operational urgency.</p>
+                    <p>I've prepared a short video to walk you through the SAGE app and show how the SAGE app works.</p>
+                    <p>Microsoft Fabric is a platform that brings data, analytics, and AI together, including Power BI.</p>
+                    <p>Here are the top capabilities that Fabric brings to us.</p>
+                    <p>First, recording operational exceptions directly from a report. Second, reviewing staffing recommendations based on remaining workload and available labor.</p>
+                    <p>Then we have scheduled and threshold alerts. These can send push notifications so supervisors can stay on the floor without stopping to run a Cognos report or open a dashboard for routine checks. For example, they could receive a service-level update at the start of the shift, then another notification if their section falls below the agreed target.</p>
+                    <p>Finally, they can ask questions like, "What was yesterday's TML by work type?" and get an answer using approved data. The diagram below shows how that question reaches the data and comes back as an answer.</p>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+<script>
+    let seconds = 0;
+    let running = false;
+    let interval = null;
+    const timerEl = document.getElementById('timer');
+    const startPauseBtn = document.getElementById('startPause');
+    const resetBtn = document.getElementById('reset');
+
+    function formatTime(s) {
+        const m = Math.floor(s / 60).toString().padStart(2, '0');
+        const sec = (s % 60).toString().padStart(2, '0');
+        return m + ':' + sec;
+    }
+
+    function tick() {
+        seconds++;
+        timerEl.textContent = formatTime(seconds);
+        timerEl.classList.remove('warn', 'over');
+        if (seconds >= 120) timerEl.classList.add('over');
+        else if (seconds >= 90) timerEl.classList.add('warn');
+    }
+
+    startPauseBtn.addEventListener('click', () => {
+        if (running) {
+            clearInterval(interval);
+            startPauseBtn.textContent = 'Start';
+        } else {
+            interval = setInterval(tick, 1000);
+            startPauseBtn.textContent = 'Pause';
+        }
+        running = !running;
+    });
+
+    resetBtn.addEventListener('click', () => {
+        clearInterval(interval);
+        running = false;
+        seconds = 0;
+        timerEl.textContent = '00:00';
+        timerEl.classList.remove('warn', 'over');
+        startPauseBtn.textContent = 'Start';
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+            e.preventDefault();
+            startPauseBtn.click();
+        }
+    });
+</script>
+
+</body>
+</html>
