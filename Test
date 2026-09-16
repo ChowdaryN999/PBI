@@ -1,1 +1,1 @@
-triggerOutputs()?['body/{TriggerWindowStartToken}']
+body('Get_changes')?['ColumnHasChanged']?['Request_Status']
