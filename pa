@@ -1,0 +1,311 @@
+/* =====================================================================
+   QUALITY AUDIT SELECTION: DRAFT SOLUTION (v0.1)
+   Purpose : 1) Pace tracker  2) Daily "whom to audit" list
+   Status  : DRAFT. All table and column names below are ASSUMED.
+             Map them to production names before running.
+
+   BUSINESS RULES CAPTURED SO FAR
+   - Eligible population is defined by job code (about 2,500 colleagues)
+   - Goal: 100 split case pieces audited per colleague per fiscal month
+   - FS and RX pieces both count toward the same 100
+   - Same rule for new hires and tenured colleagues (for now)
+   - Every pick section in a DC should get audited each fiscal month
+   - Fiscal month ends on the last Saturday of the calendar month
+   - Two audit methods: WALK (auditor moves through sections) and
+     CONVEYOR (auditor pulls totes off the belt after the pick line)
+   - Auditor capacity varies by site, so it is learned from history
+
+   ASSUMED SOURCE OBJECTS (replace with production names)
+   ---------------------------------------------------------------------
+   AUDIT_DETAIL          one row per audited line
+       DC_ID, AUDIT_TS, AUDITOR_ID, PICKER_ID, PICK_SECTION, TOTE_ID,
+       PICK_TYPE ('SPLIT' / 'FULL'), BUSINESS_UNIT ('FS' / 'RX'),
+       PIECES_AUDITED, ERROR_PIECES
+   COLLEAGUE_MASTER      one row per colleague
+       COLLEAGUE_ID, COLLEAGUE_NAME, DC_ID, JOB_CODE, HIRE_DATE, STATUS
+   ELIGIBLE_JOB_CODES    list of job codes that qualify for audits
+       JOB_CODE
+   PICK_SECTION_MASTER   every active pick section per DC
+       DC_ID, PICK_SECTION
+   LIVE_LOGIN            your existing "who is logged in and where" query
+       DC_ID, COLLEAGUE_ID, PICK_SECTION, LOGIN_TS
+   DC_CONFIG             one row per DC
+       DC_ID, AUDIT_METHOD ('WALK' / 'CONVEYOR')
+   ===================================================================== */
+
+
+/* ---------------------------------------------------------------------
+   VIEW 1: FISCAL MONTH
+   Derived for now. Swap this one view for the fiscal calendar table
+   later and nothing else has to change.
+   --------------------------------------------------------------------- */
+CREATE OR REPLACE VIEW V_QA_FISCAL_MONTH AS
+WITH e AS (
+    SELECT CURRENT_DATE AS DT,
+           PREVIOUS_DAY(LAST_DAY(CURRENT_DATE) + 1, 'sa') AS THIS_END
+),
+f AS (
+    SELECT DT,
+           IFF(DT <= THIS_END,
+               THIS_END,
+               PREVIOUS_DAY(LAST_DAY(DATEADD(month, 1, DT)) + 1, 'sa')) AS FM_END
+    FROM e
+),
+g AS (
+    SELECT DT,
+           FM_END,
+           PREVIOUS_DAY(LAST_DAY(DATEADD(month, -1, FM_END)) + 1, 'sa') + 1 AS FM_START
+    FROM f
+)
+SELECT DT,
+       FM_START,
+       FM_END,
+       DATEDIFF(day, FM_START, DT) + 1      AS DAYS_ELAPSED,
+       DATEDIFF(day, FM_START, FM_END) + 1  AS DAYS_IN_MONTH,
+       DATEDIFF(day, DT, FM_END)            AS DAYS_REMAINING,
+       ROUND(100 * (DATEDIFF(day, FM_START, DT) + 1)
+                 / (DATEDIFF(day, FM_START, FM_END) + 1), 0) AS PACE_TARGET
+FROM g;
+
+
+/* ---------------------------------------------------------------------
+   VIEW 2: COLLEAGUE PACE TRACKER
+   Answers: is every eligible colleague on track for 100 pieces?
+   One row per eligible colleague, including those with zero audits.
+   --------------------------------------------------------------------- */
+CREATE OR REPLACE VIEW V_QA_COLLEAGUE_PACE AS
+WITH elig AS (
+    SELECT c.COLLEAGUE_ID, c.COLLEAGUE_NAME, c.DC_ID, c.JOB_CODE, c.HIRE_DATE
+    FROM COLLEAGUE_MASTER c
+    JOIN ELIGIBLE_JOB_CODES j ON j.JOB_CODE = c.JOB_CODE
+    WHERE c.STATUS = 'ACTIVE'
+),
+aud AS (
+    SELECT a.DC_ID,
+           a.PICKER_ID,
+           SUM(a.PIECES_AUDITED)                                   AS PIECES_MTD,
+           SUM(IFF(a.BUSINESS_UNIT = 'FS', a.PIECES_AUDITED, 0))   AS FS_PIECES_MTD,
+           SUM(IFF(a.BUSINESS_UNIT = 'RX', a.PIECES_AUDITED, 0))   AS RX_PIECES_MTD,
+           SUM(a.ERROR_PIECES)                                     AS ERROR_PIECES_MTD,
+           COUNT(DISTINCT a.TOTE_ID)                               AS TOTES_AUDITED_MTD,
+           COUNT(DISTINCT a.PICK_SECTION)                          AS SECTIONS_AUDITED_IN,
+           MAX(a.AUDIT_TS)                                         AS LAST_AUDIT_TS
+    FROM AUDIT_DETAIL a
+    CROSS JOIN V_QA_FISCAL_MONTH fm
+    WHERE a.PICK_TYPE = 'SPLIT'
+      AND a.AUDIT_TS::DATE BETWEEN fm.FM_START AND fm.FM_END
+    GROUP BY a.DC_ID, a.PICKER_ID
+)
+SELECT e.DC_ID,
+       e.COLLEAGUE_ID,
+       e.COLLEAGUE_NAME,
+       e.JOB_CODE,
+       e.HIRE_DATE,
+       /* ASSUMPTION: new hire = first 90 days. Change as needed. */
+       IFF(DATEDIFF(day, e.HIRE_DATE, fm.DT) <= 90, 'New Hire', 'Tenured') AS TENURE_GROUP,
+       COALESCE(a.PIECES_MTD, 0)         AS PIECES_MTD,
+       COALESCE(a.FS_PIECES_MTD, 0)      AS FS_PIECES_MTD,
+       COALESCE(a.RX_PIECES_MTD, 0)      AS RX_PIECES_MTD,
+       COALESCE(a.ERROR_PIECES_MTD, 0)   AS ERROR_PIECES_MTD,
+       COALESCE(a.TOTES_AUDITED_MTD, 0)  AS TOTES_AUDITED_MTD,
+       a.LAST_AUDIT_TS,
+       100                               AS MONTH_GOAL,
+       fm.PACE_TARGET,
+       GREATEST(100 - COALESCE(a.PIECES_MTD, 0), 0)             AS PIECES_REMAINING,
+       GREATEST(fm.PACE_TARGET - COALESCE(a.PIECES_MTD, 0), 0)  AS PIECES_BEHIND_PACE,
+       fm.DAYS_REMAINING,
+       CASE
+           WHEN COALESCE(a.PIECES_MTD, 0) >= 100                   THEN '1 Complete'
+           WHEN COALESCE(a.PIECES_MTD, 0) >= fm.PACE_TARGET        THEN '2 On Pace'
+           WHEN COALESCE(a.PIECES_MTD, 0) = 0                      THEN '5 Not Started'
+           WHEN COALESCE(a.PIECES_MTD, 0) >= fm.PACE_TARGET * 0.5  THEN '3 Behind'
+           ELSE '4 At Risk'
+       END AS PACE_STATUS
+FROM elig e
+CROSS JOIN V_QA_FISCAL_MONTH fm
+LEFT JOIN aud a
+       ON a.DC_ID = e.DC_ID
+      AND a.PICKER_ID = e.COLLEAGUE_ID;
+
+
+/* ---------------------------------------------------------------------
+   VIEW 3: PICK SECTION COVERAGE
+   Answers: is every pick section in the DC getting audited?
+   One row per DC and pick section, including sections with zero audits.
+   --------------------------------------------------------------------- */
+CREATE OR REPLACE VIEW V_QA_SECTION_COVERAGE AS
+WITH aud AS (
+    SELECT a.DC_ID,
+           a.PICK_SECTION,
+           SUM(a.PIECES_AUDITED)        AS PIECES_MTD,
+           SUM(a.ERROR_PIECES)          AS ERROR_PIECES_MTD,
+           COUNT(DISTINCT a.PICKER_ID)  AS COLLEAGUES_AUDITED,
+           MAX(a.AUDIT_TS)              AS LAST_AUDIT_TS
+    FROM AUDIT_DETAIL a
+    CROSS JOIN V_QA_FISCAL_MONTH fm
+    WHERE a.PICK_TYPE = 'SPLIT'
+      AND a.AUDIT_TS::DATE BETWEEN fm.FM_START AND fm.FM_END
+    GROUP BY a.DC_ID, a.PICK_SECTION
+),
+base AS (
+    SELECT s.DC_ID,
+           s.PICK_SECTION,
+           COALESCE(a.PIECES_MTD, 0)          AS PIECES_MTD,
+           COALESCE(a.ERROR_PIECES_MTD, 0)    AS ERROR_PIECES_MTD,
+           COALESCE(a.COLLEAGUES_AUDITED, 0)  AS COLLEAGUES_AUDITED,
+           a.LAST_AUDIT_TS
+    FROM PICK_SECTION_MASTER s
+    LEFT JOIN aud a
+           ON a.DC_ID = s.DC_ID
+          AND a.PICK_SECTION = s.PICK_SECTION
+)
+SELECT b.*,
+       MEDIAN(b.PIECES_MTD) OVER (PARTITION BY b.DC_ID) AS DC_MEDIAN_SECTION_PIECES,
+       CASE
+           WHEN b.PIECES_MTD = 0 THEN '3 Not Covered'
+           WHEN b.PIECES_MTD < MEDIAN(b.PIECES_MTD) OVER (PARTITION BY b.DC_ID) THEN '2 Light Coverage'
+           ELSE '1 Covered'
+       END AS COVERAGE_STATUS
+FROM base b;
+
+
+/* ---------------------------------------------------------------------
+   VIEW 4: NEW HIRE VS TENURED
+   Answers: how are new hires being audited compared to tenured?
+   --------------------------------------------------------------------- */
+CREATE OR REPLACE VIEW V_QA_TENURE_COMPARE AS
+SELECT DC_ID,
+       TENURE_GROUP,
+       COUNT(*)                                               AS ELIGIBLE_COLLEAGUES,
+       SUM(IFF(PIECES_MTD > 0, 1, 0))                         AS COLLEAGUES_AUDITED,
+       SUM(IFF(PIECES_MTD >= 100, 1, 0))                      AS COLLEAGUES_AT_GOAL,
+       ROUND(AVG(PIECES_MTD), 1)                              AS AVG_PIECES_MTD,
+       ROUND(100 * SUM(IFF(PIECES_MTD >= PACE_TARGET, 1, 0)) / COUNT(*), 1) AS PCT_ON_PACE,
+       ROUND(100 * (1 - SUM(ERROR_PIECES_MTD) / NULLIF(SUM(PIECES_MTD), 0)), 2) AS PIECE_ACCURACY_PCT
+FROM V_QA_COLLEAGUE_PACE
+GROUP BY DC_ID, TENURE_GROUP;
+
+
+/* ---------------------------------------------------------------------
+   VIEW 5: DAILY AUDIT LIST (the algorithm)
+   Who should the auditor go to right now, in priority order.
+
+   How the score works, in plain words:
+   1) Start only with colleagues who are logged in right now
+   2) Drop anyone who already has their 100 pieces
+   3) Colleague need  : how far behind pace they are (0 to 1)
+   4) Section need    : 1.0 if the section has no audits this month,
+                        0.5 if it is lightly covered, 0 otherwise
+   5) New hire boost  : set to 0 for now since the rule is the same
+   6) Priority score  = weighted mix of the three
+   7) Cut the list off at what the site's auditors normally complete
+      in a day, based on the last 8 weeks of that site's history
+   --------------------------------------------------------------------- */
+CREATE OR REPLACE VIEW V_QA_DAILY_AUDIT_LIST AS
+WITH params AS (
+    SELECT 0.65 AS W_COLLEAGUE,     -- weight: colleague behind pace
+           0.35 AS W_SECTION,       -- weight: section coverage gap
+           0.00 AS W_NEW_HIRE,      -- weight: new hire boost (off for now)
+           25   AS PIECES_PER_VISIT,-- ASSUMPTION: pieces audited per visit
+           500  AS DEFAULT_CAPACITY -- used if a site has no history
+),
+capacity AS (
+    SELECT a.DC_ID,
+           SUM(a.PIECES_AUDITED) / NULLIF(COUNT(DISTINCT a.AUDIT_TS::DATE), 0) AS DAILY_CAPACITY
+    FROM AUDIT_DETAIL a
+    WHERE a.PICK_TYPE = 'SPLIT'
+      AND a.AUDIT_TS::DATE BETWEEN CURRENT_DATE - 56 AND CURRENT_DATE - 1
+    GROUP BY a.DC_ID
+),
+scored AS (
+    SELECT l.DC_ID,
+           l.COLLEAGUE_ID,
+           p.COLLEAGUE_NAME,
+           l.PICK_SECTION            AS CURRENT_SECTION,
+           p.TENURE_GROUP,
+           p.PIECES_MTD,
+           p.PIECES_REMAINING,
+           p.PACE_TARGET,
+           p.PACE_STATUS,
+           s.COVERAGE_STATUS         AS SECTION_COVERAGE,
+           cfg.AUDIT_METHOD,
+           LEAST(p.PIECES_REMAINING, pr.PIECES_PER_VISIT) AS RECOMMENDED_PIECES,
+           COALESCE(cap.DAILY_CAPACITY, pr.DEFAULT_CAPACITY) AS DAILY_CAPACITY,
+           /* colleague need, 0 to 1 */
+           COALESCE(p.PIECES_BEHIND_PACE / NULLIF(p.PACE_TARGET, 0), 0) AS COLLEAGUE_NEED,
+           /* section need, 0 to 1 */
+           CASE s.COVERAGE_STATUS
+               WHEN '3 Not Covered'    THEN 1.0
+               WHEN '2 Light Coverage' THEN 0.5
+               ELSE 0
+           END AS SECTION_NEED,
+           IFF(p.TENURE_GROUP = 'New Hire', 1, 0) AS NEW_HIRE_FLAG,
+           pr.W_COLLEAGUE, pr.W_SECTION, pr.W_NEW_HIRE
+    FROM LIVE_LOGIN l
+    JOIN V_QA_COLLEAGUE_PACE p
+          ON p.DC_ID = l.DC_ID
+         AND p.COLLEAGUE_ID = l.COLLEAGUE_ID
+    LEFT JOIN V_QA_SECTION_COVERAGE s
+          ON s.DC_ID = l.DC_ID
+         AND s.PICK_SECTION = l.PICK_SECTION
+    LEFT JOIN DC_CONFIG cfg ON cfg.DC_ID = l.DC_ID
+    LEFT JOIN capacity cap  ON cap.DC_ID = l.DC_ID
+    CROSS JOIN params pr
+    WHERE p.PIECES_MTD < 100
+),
+ranked AS (
+    SELECT sc.*,
+           ROUND(sc.W_COLLEAGUE * sc.COLLEAGUE_NEED
+               + sc.W_SECTION   * sc.SECTION_NEED
+               + sc.W_NEW_HIRE  * sc.NEW_HIRE_FLAG, 3) AS PRIORITY_SCORE
+    FROM scored sc
+),
+running AS (
+    SELECT r.*,
+           ROW_NUMBER() OVER (PARTITION BY r.DC_ID
+                              ORDER BY r.PRIORITY_SCORE DESC, r.PIECES_MTD, r.COLLEAGUE_ID) AS PRIORITY_RANK,
+           SUM(r.RECOMMENDED_PIECES) OVER (PARTITION BY r.DC_ID
+                              ORDER BY r.PRIORITY_SCORE DESC, r.PIECES_MTD, r.COLLEAGUE_ID
+                              ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS RUNNING_PIECES
+    FROM ranked r
+)
+SELECT DC_ID,
+       PRIORITY_RANK,
+       COLLEAGUE_ID,
+       COLLEAGUE_NAME,
+       CURRENT_SECTION,
+       TENURE_GROUP,
+       PIECES_MTD,
+       PIECES_REMAINING,
+       RECOMMENDED_PIECES,
+       PRIORITY_SCORE,
+       /* plain language reason the auditor can read */
+       TRIM(
+           IFF(COLLEAGUE_NEED >= 0.5, 'Well behind on 100 piece goal. ',
+               IFF(COLLEAGUE_NEED > 0, 'Slightly behind pace. ', 'On pace, still needs pieces. '))
+        || IFF(SECTION_NEED = 1.0, 'Section has no audits this month. ',
+               IFF(SECTION_NEED = 0.5, 'Section is lightly covered. ', ''))
+       ) AS REASON,
+       /* instruction depends on how the site audits */
+       IFF(AUDIT_METHOD = 'CONVEYOR',
+           'Pull next tote from ' || CURRENT_SECTION || ' picked by ' || COLLEAGUE_NAME,
+           'Go to ' || CURRENT_SECTION || ' and audit ' || COLLEAGUE_NAME) AS AUDITOR_INSTRUCTION
+FROM running
+WHERE RUNNING_PIECES <= DAILY_CAPACITY
+ORDER BY DC_ID, PRIORITY_RANK;
+
+
+/* =====================================================================
+   OPEN ITEMS TO CONFIRM AGAINST PRODUCTION
+   1. Table and column names (everything above is assumed)
+   2. How split case is flagged (PICK_TYPE = 'SPLIT' is a guess)
+   3. New hire cutoff (90 days is a placeholder)
+   4. Pieces per audit visit (25 is a placeholder, could be learned
+      from average pieces per audited tote by site)
+   5. Pace math counts every calendar day. If sites do not audit on
+      weekends, switch to working days
+   6. Colleagues hired or transferred mid month: keep the full 100 or
+      prorate the goal
+   7. Colleagues who move between DCs or sections during the month
+   8. Score weights (0.65 colleague / 0.35 section) are a starting point
+   ===================================================================== */
