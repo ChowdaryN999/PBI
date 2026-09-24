@@ -1,0 +1,8 @@
+Search Text =
+COALESCE(FORMAT('SCL_Requests'[Request_ID], ""), "") & " | " &
+COALESCE('SCL_Requests'[Requester_Name], "") & " | " &
+COALESCE(FORMAT('SCL_Requests'[Submitted_DT], "MM/dd/yyyy"), "") & " | " &
+COALESCE('SCL_Requests'[Request_Type], "") & " | " &
+COALESCE('SCL_Requests'[Requirements], "") & " | " &
+COALESCE('SCL_Requests'[Business Justification], "") & " | " &
+COALESCE('SCL_Requests'[Status], "")
