@@ -1,1 +1,26 @@
-Switch(ThisItem.SCL_Request_Type.Value, "Incident", Coalesce(ThisItem.Tool_Affected, ThisItem.Issue_Description, "N/A"), "Data Extract", Coalesce(ThisItem.What_Data_Needed, "N/A"), "New Report/Tool", Coalesce(ThisItem.Report_Name, "N/A"), "Enhancement Request", Coalesce(ThisItem.Report_Name, ThisItem.Enhancement_Ask, "N/A"), "N/A")
+-- Validation: IORDL outs by code, one DC, one day
+-- Compare to ESL report filtered to the same DC and day
+SELECT
+    l.DC_ID,
+    TRUNC(l.CREATE_DTIM)                        AS OUT_DATE,
+    TRUNC(l.CREATE_DTIM + 1, 'IW') + 5          AS WEEK_ENDING,
+    l.ERCD_ID                                   AS OUT_CODE,
+    l.LOG_FUNC,
+    COUNT(*)                                    AS ROWS_CNT,
+    COUNT(DISTINCT l.ORD_ID || '-' || l.ORDD_ID) AS LINES_CNT,
+    SUM(l.OLD_QTY - l.NEW_QTY)                  AS QTY_CHANGE,
+    SUM(l.NOT_SHIP_QTY)                         AS NOT_SHIP,
+    SUM(l.ORD_QTY)                              AS ORD_QTY
+FROM IORDL l
+WHERE l.DC_ID = 15                              -- << pick your DC
+  AND l.CREATE_DTIM >= DATE '2026-10-10'        -- << pick your day
+  AND l.CREATE_DTIM <  DATE '2026-10-10' + 1
+  AND l.ERCD_ID IS NOT NULL
+GROUP BY
+    l.DC_ID,
+    TRUNC(l.CREATE_DTIM),
+    TRUNC(l.CREATE_DTIM + 1, 'IW') + 5,
+    l.ERCD_ID,
+    l.LOG_FUNC
+ORDER BY OUT_CODE, ROWS_CNT DESC;
+
