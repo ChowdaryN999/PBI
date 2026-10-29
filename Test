@@ -1,26 +1,37 @@
--- Validation: IORDL outs by code, one DC, one day
--- Compare to ESL report filtered to the same DC and day
-SELECT
-    l.DC_ID,
-    TRUNC(l.CREATE_DTIM)                        AS OUT_DATE,
-    TRUNC(l.CREATE_DTIM + 1, 'IW') + 5          AS WEEK_ENDING,
-    l.ERCD_ID                                   AS OUT_CODE,
-    l.LOG_FUNC,
-    COUNT(*)                                    AS ROWS_CNT,
-    COUNT(DISTINCT l.ORD_ID || '-' || l.ORDD_ID) AS LINES_CNT,
-    SUM(l.OLD_QTY - l.NEW_QTY)                  AS QTY_CHANGE,
-    SUM(l.NOT_SHIP_QTY)                         AS NOT_SHIP,
-    SUM(l.ORD_QTY)                              AS ORD_QTY
-FROM IORDL l
-WHERE l.DC_ID = 15                              -- << pick your DC
-  AND l.CREATE_DTIM >= DATE '2026-10-10'        -- << pick your day
-  AND l.CREATE_DTIM <  DATE '2026-10-10' + 1
-  AND l.ERCD_ID IS NOT NULL
-GROUP BY
-    l.DC_ID,
-    TRUNC(l.CREATE_DTIM),
-    TRUNC(l.CREATE_DTIM + 1, 'IW') + 5,
-    l.ERCD_ID,
-    l.LOG_FUNC
-ORDER BY OUT_CODE, ROWS_CNT DESC;
-
+If(gblOverlayMode = "activity",
+  If(IsBlank(gblAnalyticsRequest.Comment),
+     "<div style=""font-family:'Segoe UI',sans-serif;font-size:14px;color:#5A6478;"">No activity yet.</div>",
+     Concat(
+       Split(gblAnalyticsRequest.Comment, Char(10) & Char(10)),
+       "<div style=""font-family:'Segoe UI',sans-serif;font-size:14px;color:#1C2A4F;white-space:pre-wrap;line-height:1.5;border-top:1px solid #E2E5EA;padding:12px 0;"">" & Value & "</div>"
+     )
+  ),
+Switch(
+  If(IsBlank(gblAnalyticsRequest), gblrequesttype, gblAnalyticsRequest.SCL_Request_Type.Value),
+  "Data Extract",
+    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>What data</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.What_Data_Needed, If(gblWhatData <> "", gblWhatData), "-") & "</div>" &
+    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Source system</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(Concat(gblAnalyticsRequest.Source_System, Value, ", "), Concat(gblSourceSystem, Value, ", "), "-") & "</div>" &
+    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Date range</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Date_Range, If(gblDateRange <> "", gblDateRange), "-") & "</div>" &
+    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>File format</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.File_Format.Value, If(gblFileFormat <> "", gblFileFormat), "-") & "</div>" &
+    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Frequency</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Frequency.Value, If(gblFrequency <> "", gblFrequency), "-") & "</div>" &
+    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Business justification</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Business_Justification, If(gblBusinessJustification <> "", gblBusinessJustification), "-") & "</div>",
+  "Incident",
+    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Product(s) with issues</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Tool_Affected, If(gblToolAffected <> "", gblToolAffected), "-") & "</div>" &
+    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Issue</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Issue_Description, If(gblIssueDescription <> "", gblIssueDescription), "-") & "</div>" &
+    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Business impact</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Business_Impact, If(gblBusinessImpact <> "", gblBusinessImpact), "-") & "</div>" &
+    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Link</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Tool_Reference, gblAnalyticsRequest.Link_To_Tool, If(gblLinkToTool <> "", gblLinkToTool), "-") & "</div>",
+  "New Report/Tool",
+    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Report name</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Report_Name, If(gblReportName <> "", gblReportName), "-") & "</div>" &
+    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Platform</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(Concat(gblAnalyticsRequest.Platform, Value, ", "), Concat(gblPlatform, Title, ", "), "-") & "</div>" &
+    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Requirements</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Requirements, If(gblRequirements <> "", gblRequirements), "-") & "</div>" &
+    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Target audience</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(Concat(gblAnalyticsRequest.Target_Audience, Value, ", "), Concat(gblTargetAudience, Value, ", "), "-") & "</div>" &
+    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Business justification</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Business_Justification, If(gblBusinessJustification <> "", gblBusinessJustification), "-") & "</div>",
+  "Enhancement Request",
+    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Report name</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Report_Name, If(gblReportName <> "", gblReportName), "-") & "</div>" &
+    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Platform</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(Concat(gblAnalyticsRequest.Platform, Value, ", "), Concat(gblPlatform, Title, ", "), "-") & "</div>" &
+    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Enhancement requested</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Enhancement_Ask, If(gblEnhancementAsk <> "", gblEnhancementAsk), "-") & "</div>" &
+    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Business justification</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Business_Justification, If(gblBusinessJustification <> "", gblBusinessJustification), "-") & "</div>" &
+    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Link</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Tool_Reference, gblAnalyticsRequest.Link_To_Tool, If(gblLinkToTool <> "", gblLinkToTool), "-") & "</div>",
+  "Select a request type to see details."
+)
+)
