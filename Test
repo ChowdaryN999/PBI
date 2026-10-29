@@ -1,37 +1,157 @@
-If(gblOverlayMode = "activity",
-  If(IsBlank(gblAnalyticsRequest.Comment),
-     "<div style=""font-family:'Segoe UI',sans-serif;font-size:14px;color:#5A6478;"">No activity yet.</div>",
-     Concat(
-       Split(gblAnalyticsRequest.Comment, Char(10) & Char(10)),
-       "<div style=""font-family:'Segoe UI',sans-serif;font-size:14px;color:#1C2A4F;white-space:pre-wrap;line-height:1.5;border-top:1px solid #E2E5EA;padding:12px 0;"">" & Value & "</div>"
-     )
-  ),
-Switch(
-  If(IsBlank(gblAnalyticsRequest), gblrequesttype, gblAnalyticsRequest.SCL_Request_Type.Value),
-  "Data Extract",
-    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>What data</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.What_Data_Needed, If(gblWhatData <> "", gblWhatData), "-") & "</div>" &
-    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Source system</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(Concat(gblAnalyticsRequest.Source_System, Value, ", "), Concat(gblSourceSystem, Value, ", "), "-") & "</div>" &
-    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Date range</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Date_Range, If(gblDateRange <> "", gblDateRange), "-") & "</div>" &
-    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>File format</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.File_Format.Value, If(gblFileFormat <> "", gblFileFormat), "-") & "</div>" &
-    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Frequency</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Frequency.Value, If(gblFrequency <> "", gblFrequency), "-") & "</div>" &
-    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Business justification</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Business_Justification, If(gblBusinessJustification <> "", gblBusinessJustification), "-") & "</div>",
-  "Incident",
-    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Product(s) with issues</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Tool_Affected, If(gblToolAffected <> "", gblToolAffected), "-") & "</div>" &
-    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Issue</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Issue_Description, If(gblIssueDescription <> "", gblIssueDescription), "-") & "</div>" &
-    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Business impact</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Business_Impact, If(gblBusinessImpact <> "", gblBusinessImpact), "-") & "</div>" &
-    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Link</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Tool_Reference, gblAnalyticsRequest.Link_To_Tool, If(gblLinkToTool <> "", gblLinkToTool), "-") & "</div>",
-  "New Report/Tool",
-    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Report name</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Report_Name, If(gblReportName <> "", gblReportName), "-") & "</div>" &
-    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Platform</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(Concat(gblAnalyticsRequest.Platform, Value, ", "), Concat(gblPlatform, Title, ", "), "-") & "</div>" &
-    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Requirements</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Requirements, If(gblRequirements <> "", gblRequirements), "-") & "</div>" &
-    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Target audience</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(Concat(gblAnalyticsRequest.Target_Audience, Value, ", "), Concat(gblTargetAudience, Value, ", "), "-") & "</div>" &
-    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Business justification</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Business_Justification, If(gblBusinessJustification <> "", gblBusinessJustification), "-") & "</div>",
-  "Enhancement Request",
-    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Report name</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Report_Name, If(gblReportName <> "", gblReportName), "-") & "</div>" &
-    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Platform</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(Concat(gblAnalyticsRequest.Platform, Value, ", "), Concat(gblPlatform, Title, ", "), "-") & "</div>" &
-    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Enhancement requested</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Enhancement_Ask, If(gblEnhancementAsk <> "", gblEnhancementAsk), "-") & "</div>" &
-    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Business justification</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Business_Justification, If(gblBusinessJustification <> "", gblBusinessJustification), "-") & "</div>" &
-    "<div style=""font-family:'Segoe UI',sans-serif;font-size:11px;font-weight:700;color:#5A6478;letter-spacing:.06em;text-transform:uppercase;margin:0 0 4px 0;""><b>Link</b></div><div style=""font-family:'Segoe UI',sans-serif;font-size:14px;font-weight:400;color:#1C2A4F;margin:0 0 18px 0;white-space:pre-wrap;line-height:1.45;"">" & Coalesce(gblAnalyticsRequest.Tool_Reference, gblAnalyticsRequest.Link_To_Tool, If(gblLinkToTool <> "", gblLinkToTool), "-") & "</div>",
-  "Select a request type to see details."
-)
+If(IsBlank(gblAnalyticsRequest),
+    If(
+        IsBlank(gblbusinessTeam) || IsBlank(gblrequesttype) || IsBlank(gblpriority)
+          || If(gblbusinessTeam = gblDcOpsName, IsBlank(gblDC), IsBlank(gblTeamName)),
+        Notify("Please complete all required fields (Requesting From, Request Type, Priority, and DC/Team Name) before submitting. Use the Edit button to go back.", NotificationType.Error),
+        // the guard sits HERE, not around the whole OnSelect: the
+        // validation-failure paths above never set the flag, so they
+        // can never leave the button stuck.
+        If(gblSubmitting,
+          Notify("Your request is already being submitted. Please wait.", NotificationType.Warning),
+        Set(gblSubmitting, true);
+        Set(gblNewRequest,
+          Patch(SCL_Requests, Defaults(SCL_Requests),
+          {
+            Title: "PENDING",
+            Requester_Name: User().FullName,
+            Requestor_Email: User().Email,
+            Business_Team: { Id: LookUp(SCL_TEAM, Title = gblbusinessTeam).ID, Value: gblbusinessTeam },
+            DC: If(gblbusinessTeam = gblDcOpsName, { Id: LookUp(SCL_DC, Title = gblDC).ID, Value: gblDC }),
+            Team_Name: If(gblbusinessTeam <> gblDcOpsName, gblTeamName),
+            Priority: { Id: LookUp(SCL_Priority, Title = gblpriority).ID, Value: gblpriority },
+            SCL_Request_Type: { Id: LookUp(SCL_Request_Type, Title = gblrequesttype).ID, Value: gblrequesttype },
+            Platform: ForAll(gblPlatform As p, { Id: p.ID, Value: p.Title }),
+            Request_Status: { Id: LookUp(SCL_Request_Status, Title = "Pending Review").ID, Value: "Pending Review" },
+            Frequency: If(!IsBlank(gblFrequency), {Value: gblFrequency}),
+            File_Format: If(!IsBlank(gblFileFormat), {Value: gblFileFormat}),
+            Source_System: gblSourceSystem,
+            Target_Audience: gblTargetAudience,
+            DDAT_Needed: {Value: "No"},
+            What_Data_Needed: gblWhatData, Date_Range: gblDateRange,
+            Business_Justification: gblBusinessJustification,
+            Issue_Description: gblIssueDescription, Business_Impact: gblBusinessImpact,
+            Tool_Affected: gblToolAffected, Report_Name: gblReportName,
+            Enhancement_Ask: gblEnhancementAsk, Requirements: gblRequirements,
+            Tool_Reference: gblLinkToTool
+          }
+        ));
+        // Request ID = <Requesting From code>-<10000 + item ID>, e.g. DCOP-10042.
+        // Two-step because the SharePoint ID only exists once the item is created.
+        Set(gblNewRequestId,
+          LookUp(SCL_TEAM, Title = gblbusinessTeam).Team_Code & "-" & Text(10000 + gblNewRequest.ID));
+        Patch(SCL_Requests, gblNewRequest, { Title: gblNewRequestId });
+        Notify("Request " & gblNewRequestId & " submitted.", NotificationType.Success);
+        Set(gblStage, 1);
+        Set(gblSubmitting, false);
+        Navigate(MyRequests)
+        )
+    ),
+    // ── TRIAGE: driven by the two answers, not by modes ──
+    // Q1 No  -> route it away; status and DDAT deliberately untouched.
+    // Q1 Yes -> we own it: set status, and record DDAT if Q2 is Yes.
+    // Every path appends ONE stamped entry to the activity thread (Comment).
+    //
+    // ── GUARDS AT THE WRITE, not just on the controls ──
+    // DisplayMode only dims a control; the value is still readable and the
+    // formula still runs. Every UI lock below therefore has a twin here.
+        If(!gblCanTriage,
+            Notify("You do not have triage rights on this request.", NotificationType.Error),
+          If(gblAnalyticsRequest.Request_Status.Value = "Completed",
+            Notify("This request is completed and can no longer be edited.", NotificationType.Error),
+          // A domain admin cannot un-escalate. Wiping DDAT_Status here would
+          // leave DDAT_SubTeam and DDAT_Assigned_To populated, so the request
+          // would claim no DDAT involvement while still carrying an assignee.
+          If(!gblQDdat && gblAnalyticsRequest.DDAT_Needed.Value = "Yes",
+            Notify("DDAT already holds this request. Only DDAT can end it, by delivering or rejecting.", NotificationType.Error),
+        If((rev_drpStatus.Selected.Title = "Completed" || rev_drpStatus.Selected.Title = "Rejected") && IsBlank(rev_txtResolution.Text),
+            Notify("Add a Resolution before closing this request.", NotificationType.Error),
+          // guard 2: never close a request whose DDAT dependency is still open.
+          // Delivered or Rejected both count as DDAT being finished with it.
+          If(rev_drpStatus.Selected.Title = "Completed" && gblQDdat
+               && Coalesce(gblAnalyticsRequest.DDAT_Status.Value, gblAnalyticsRequest.DDAT_Status.Value, "Requested") <> "Delivered" && Coalesce(gblAnalyticsRequest.DDAT_Status.Value, gblAnalyticsRequest.DDAT_Status.Value, "Requested") <> "Rejected",
+            Notify("DDAT has not delivered yet, so this request cannot be completed.", NotificationType.Error),
+          If(gblQDdat && !(gblAnalyticsRequest.DDAT_Needed.Value = "Yes") && IsBlank(rev_drpDdatPriority.Selected),
+            Notify("Select a DDAT priority.", NotificationType.Error),
+          If(gblQDdat && !(gblAnalyticsRequest.DDAT_Needed.Value = "Yes") && IsBlank(rev_txtAsk.Text),
+            Notify("Say what you need DDAT to do.", NotificationType.Error),
+            // The dropdown's Selected can be blank; falling back to the stored
+            // value stops a blank both being LOGGED ("Status → ") and WRITTEN.
+            Set(gblNewStatus, Coalesce(rev_drpStatus.Selected.Title, gblAnalyticsRequest.Request_Status.Value));
+            // Raising a DDAT dependency means the team has started work, so a
+            // request still sitting at "Pending Review" advances to "In Progress".
+            // Only from Pending Review — an explicit On Hold must not be undone.
+            Set(gblNewStatus,
+              If(gblQDdat && !(gblAnalyticsRequest.DDAT_Needed.Value = "Yes")
+                   && gblNewStatus = "Pending Review",
+                 "In Progress", gblNewStatus));
+            // Cross-domain hand-off. Reassigning re-queues the request, so the
+            // receiving domain admin triages it from scratch — this overrides
+            // whatever the Status dropdown says.
+            Set(gblNewDomain,
+              Coalesce(rev_drpDomain.Selected.Title, gblAnalyticsRequest.Business_Team.Value));
+            Set(gblDomainMoved, gblNewDomain <> gblAnalyticsRequest.Business_Team.Value);
+            Set(gblNewStatus, If(gblDomainMoved, "Pending Review", gblNewStatus));
+            // summarise what actually changed, for the thread header and the toast
+            Set(gblLogHead,
+              Trim(
+                If(gblDomainMoved,
+                   " · Domain → " & gblNewDomain
+                     & " (was " & gblAnalyticsRequest.Business_Team.Value & ")", "") &
+                If(!IsBlank(gblNewStatus) && gblNewStatus <> gblAnalyticsRequest.Request_Status.Value,
+                   "Status → " & gblNewStatus, "") &
+                // no "DDAT → no longer needed" branch: un-escalation is refused
+                // by the guard above, so it could only ever log a lie
+                If(gblQDdat && !(gblAnalyticsRequest.DDAT_Needed.Value = "Yes"),
+                   " · DDAT → Requested (" & rev_drpDdatPriority.Selected.Value & ")", "") &
+                If(rev_txtResolution.Text <> Coalesce(gblAnalyticsRequest.Resolution, ""),
+                   " · Resolution updated", "") &
+                If(rev_txtResLink.Text <> Coalesce(gblAnalyticsRequest.Resolution_Link, ""),
+                   " · Link updated", "")
+              ));
+            Set(gblLogHead, If(Left(gblLogHead, 1) = "·", Trim(Mid(gblLogHead, 2)), gblLogHead));
+            // nothing actually changed and nothing was written -> refuse, so
+            // repeated Saves cannot pad the activity thread with empty entries
+            If(IsBlank(gblLogHead) && IsBlank(rev_txtComment.Text),
+              Notify("Nothing to save. Change a field or add a comment.", NotificationType.Error),
+            Set(gblLogHead, If(IsBlank(gblLogHead), "Comment", gblLogHead));
+            Patch(SCL_Requests, gblAnalyticsRequest,
+              {
+                Request_Status: { Id: LookUp(colRequestStatus, Title = gblNewStatus).ID, Value: gblNewStatus },
+                // the owning domain moves; Title (the request ID) deliberately does not
+                Business_Team: { Id: LookUp(SCL_TEAM, Title = gblNewDomain).ID, Value: gblNewDomain },
+                Resolution: rev_txtResolution.Text,
+                Resolution_Link: rev_txtResLink.Text,
+                Completion_Date:
+                  If(gblNewStatus = "Completed" && IsBlank(gblAnalyticsRequest.Completion_Date),
+                     Now(), gblAnalyticsRequest.Completion_Date),
+                DDAT_Needed: { Value: If(gblQDdat, "Yes", "No") },
+                DDAT_Priority:
+                  { Value: If(gblQDdat,
+                             Coalesce(rev_drpDdatPriority.Selected.Value, gblAnalyticsRequest.DDAT_Priority.Value),
+                             "") },
+                DDAT_Status:
+                  { Value: If(!gblQDdat, "",
+                             If(gblAnalyticsRequest.DDAT_Needed.Value = "Yes",
+                                Coalesce(gblAnalyticsRequest.DDAT_Status.Value, "Requested"),
+                                "Requested")) },
+                DDAT_Ask: If(gblQDdat, rev_txtAsk.Text, ""),
+                DDAT_Delivered_Date:
+                  If(gblQDdat && gblAnalyticsRequest.DDAT_Needed.Value = "Yes" && gblAnalyticsRequest.DDAT_Status.Value = "Delivered",
+                     Coalesce(gblAnalyticsRequest.DDAT_Delivered_Date, Now()), Blank()),
+                Comment:
+                  Text(Now(), "mm/dd/yyyy hh:mm") & " · " & User().FullName & " · " & gblLogHead &
+                  If(IsBlank(rev_txtComment.Text), "", Char(10) & rev_txtComment.Text) &
+                  If(IsBlank(gblAnalyticsRequest.Comment), "", Char(10) & Char(10) & gblAnalyticsRequest.Comment)
+              }
+            );
+            Notify("Saved: " & gblLogHead & ".", NotificationType.Success);
+            Set(gblStage, 1); Navigate(MyRequests)
+            )
+          )
+          )
+        )
+        )
+          )
+          )
+          )
 )
