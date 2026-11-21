@@ -102,3 +102,84 @@ Start with the operational use case and user's task, not technology. Ask one nec
 - Microsoft Power Platform CLI: https://learn.microsoft.com/power-platform/developer/cli/introduction
 - Microsoft Power Platform skills: https://github.com/microsoft/power-platform-skills
 - Microsoft Power Platform documentation: https://learn.microsoft.com/power-platform/
+
+## Operational runbook: first project through production
+
+### Phase A — Environment readiness (STOP if a critical item fails)
+Generate `environment-readiness.md` with each item marked PASS / FAIL / UNKNOWN, evidence, owner, and remediation:
+- **Tenant/environment:** environment name and ID, region, development/test/production separation, Power Apps Code Apps feature enabled. Admin path: Power Platform admin center > Manage > Environments > select environment > Settings > Product > Features > Enable code apps. Do not presume the user has admin access.
+- **Identity and permissions:** maker account can sign in and create apps in the selected environment; appropriate environment security role; authorized connector access; publishing and sharing rights; Microsoft Entra Conditional Access and consent requirements.
+- **Licensing:** validate Power Apps Premium or an eligible alternative (pay-as-you-go, App Pass, auto-claim) for end users. Confirm with licensing owner, including connector implications.
+- **Developer execution:** approved IDE or browser-based Codespaces, Node.js LTS, npm, Git, Power Apps CLI; ability to authenticate to corporate tenant and reach local development URLs. Claude Web alone cannot run local CLI commands.
+- **Data and governance:** Dataverse availability if using solutions; DLP/connector policies, network access, schema ownership, sample data restrictions, service accounts, audit, backup, support owner.
+- **Release design:** designated dev/test/prod environments; named release approver; source control; rollback and incident contacts.
+Output a blocking issue list and do not offer a publish command as the next step while readiness is UNKNOWN or FAIL.
+
+### Phase B — First smoke test (before building the full application)
+Use a minimal three-screen sample with synthetic records (list, details, edit). Verify these in order:
+1. A maker can sign in to the target environment.
+2. `pa --version` and `pa app --help` execute in the approved terminal.
+3. The official template can be created, initialized, run, built, and published in **development**.
+4. The resulting Power Apps URL opens under the intended tenant identity.
+5. A second authorized test user can open the shared app, and an unauthorized user cannot.
+6. One approved connector can read a synthetic test record; if writes are in scope, verify create/update and denial for unauthorized users.
+Record screenshots/logs and actual results; distinguish build, publish, and live connector verification.
+
+### Phase C — Official CLI quickstart (terminal handoff; NOT executed by Claude Web)
+Use Microsoft's maintained quickstart and check latest syntax before running. In a terminal with approved tools and a development environment:
+```bash
+npx degit github:microsoft/PowerAppsCodeApps/templates/vite my-app
+cd my-app
+npm install --global @microsoft/power-apps-cli
+npm install --global @microsoft/power-apps
+npm install
+pa --version
+pa app init --display-name "Code App POC" --environment-id <development-environment-id>
+pa app run
+# Open the Local Play URL in the browser profile signed into the same tenant.
+npm run build
+pa app push
+```
+The `pa app push` output supplies the published Power Apps URL only on success. Do not use literal placeholders as real IDs. Browser local-network access restrictions may need an IT-approved setting. A local preview is not a deployment.
+
+### Phase D — Integrate actual data
+Before replacing mocks, record table/list/API IDs, connector type, field mappings, CRUD requirements, permissions, pagination, error cases, and data ownership. Consult `pa app add data-source --help` and the official connector guide for exact syntax; let the CLI generate models/services, then inspect generated types. Avoid manual edits to generated metadata and do not hardcode credentials. Verify create, read, update, delete separately; verify concurrent edits, validation, retries, and user-level access. If connector setup is blocked, ship a mock-only POC explicitly labeled as such.
+
+### Phase E — Test matrix and release evidence
+Maintain `test-results.md` with case ID, expected, actual, tester, environment, evidence, and PASS/FAIL/BLOCKED/NOT RUN.
+- UX: all routes, navigation, responsive layouts, keyboard navigation, screen-reader labels, loading/empty/error states.
+- Data: read, create, edit, delete (where applicable), filter, sort, pagination, validation, refresh, concurrency, network failure.
+- Security: unauthorized account, least-privilege account, elevated account, cross-user data access, tenant policies, secrets scan.
+- Operations: build, app launch, performance on realistic volumes, telemetry, audit trail, support escalation, recovery.
+- Release: sharing, end-user licensing, connector consent, solution dependencies, regression after deployment.
+Minimum publish gate: approved scope + environment PASS + successful build + critical tests PASS + security signoff + named owner + explicit publish approval. Unknowns are not passes.
+
+### Phase F — Publish, share, and verify
+For a development deployment, run `npm run build` then `pa app push` from the initialized project. In a Dataverse-enabled environment, prefer solution-aware publishing:
+```bash
+pa app push --solution-id <solution-guid>
+```
+Verify the solution GUID and target environment; the flag accepts a GUID, not a solution name. When no Dataverse exists, publishing can occur without a solution, but solution-based ALM is unavailable.
+After success:
+1. Capture the returned URL, app ID, target environment, timestamp, source commit, CLI version and publisher.
+2. Open the hosted app as the maker and as a designated end user.
+3. Share the app with approved users/groups and validate actual data-source permissions and consent.
+4. Perform a production-like read/write smoke test only against authorized test records.
+5. Record release notes, known limitations, owner, escalation path, and monitoring plan.
+Never claim publish success based only on a successful build, GitHub push, or CLI instructions.
+
+### Phase G — Promote and maintain
+Use development → test → production. For environments with Dataverse, include the Code App in a solution and use Power Platform Pipelines or an approved ALM process, validating connection references, dependencies, and environment-specific settings at each stage. Do not assume Power Platform native Git integration supports Code Apps; maintain source in external GitHub and deploy compiled artifacts through supported tooling. Tag releases and keep the last known-good source and build. Document rollback steps for the chosen pipeline, including restoring a prior known-good build or redeploying an approved previous solution version after validating dependencies. Do not claim a universal one-click rollback.
+For CI/CD, a service principal may publish updates only after it has environment access **and** the existing app has been shared with its enterprise application object ID with edit access. Keep credentials in approved secret storage, never repository files.
+
+### Claude Web deliverable and handoff protocol
+If there is no terminal/MCP access, produce a downloadable project ZIP plus `environment-readiness.md`, `deployment-runbook.md`, `test-results-template.md`, and `release-checklist.md`. Include commands with clear human execution ownership and required outputs to paste back. Ask for results one step at a time; do not infer success. A ZIP or GitHub repository is a source artifact, not an installable Power Apps package.
+Do not execute or suggest production publishing until the user authorizes it explicitly.
+
+## Verified Microsoft documentation for the runbook
+- Code Apps overview, requirements, limitations: https://learn.microsoft.com/en-us/power-apps/developer/code-apps/overview
+- Official CLI quickstart: https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/npm-quickstart
+- CLI command reference: https://learn.microsoft.com/en-us/power-apps/developer/code-apps/reference/cli
+- Code Apps architecture: https://learn.microsoft.com/en-us/power-apps/developer/code-apps/architecture
+- Solution ALM: https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/alm
+- Service principal deployment: https://learn.microsoft.com/en-us/power-apps/developer/code-apps/how-to/use-service-principal
